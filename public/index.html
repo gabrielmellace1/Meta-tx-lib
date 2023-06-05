@@ -1,202 +1,170 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Web3Auth Getting Started</title>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="style.css" />
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="container">
-        <h1 class="title"><a target="_blank" href="http://web3auth.io/">Web3Auth</a> & JS Integration Example</h1>
-        <!-- Logged In -->
-        <div class="grid btn-logged-in">
-            <button id="get-user-info" class="btn">Get User Info</button>
-            <button id="get-accounts" class="btn">Get Accounts</button>
-            <button id="get-balance" class="btn">Get Balance</button>
-            <button id="sign-message" class="btn">Sign Message</button>
-            <button id="sign-transaction" class="btn">Sign Transaction</button>
-            <button id="send-transaction" class="btn">Send Transaction</button>
+      <h1 class="title">
+        <a target="_blank" href="http://web3auth.io/">Web3Auth</a> & JS
+        Integration Example
+      </h1>
+      <!-- Logged In -->
+      <div class="grid btn-logged-in">
+        <button id="get-user-info" class="btn">Get User Info</button>
+        <button id="get-accounts" class="btn">Get Accounts</button>
+        <button id="get-balance" class="btn">Get Balance</button>
+        <button id="sign-message" class="btn">Sign Message</button>
+        <button id="sign-transaction" class="btn">Sign Transaction</button>
+        <button id="send-transaction" class="btn">Send Transaction</button>
 
-            <button id="logout" class="btn">Logout</button>
+        <button id="logout" class="btn">Logout</button>
 
-            <div class="console" id="console">
-                <p id="code" class="code"></p>
-            </div>
+        <div class="console" id="console">
+          <p id="code" class="code"></p>
         </div>
+      </div>
 
-        <!-- Logged Logout -->
-        <div class="grid btn-logged-out">
-            <button id="login" class="btn">Login</button>
-        </div>
-        <footer class="footer">
-            <a href="https://github.com/Web3Auth/Web3Auth/tree/master/examples/getting-started" target="_blank"
-                rel="noopener noreferrer">
-                Source code
-            </a>
-        </footer>
+      <!-- Logged Logout -->
+      <div class="grid btn-logged-out">
+        <button id="login" class="btn">Login</button>
+      </div>
+      <footer class="footer">
+        <a
+          href="https://github.com/Web3Auth/Web3Auth/tree/master/examples/getting-started"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Source code
+        </a>
+      </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
-    <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@web3auth/modal@latest/dist/modal.umd.min.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/@web3auth/openlogin-adapter@5.2.0/dist/openloginAdapter.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3auth/modal@5.2.0/dist/modal.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3auth/openlogin-adapter@5.2.0/dist/openloginAdapter.umd.min.js"></script>
+
     <script src="./web3RPC.js"></script>
     <script>
-        let web3auth = null;
-        let provider = null;
+      let web3auth = null;
+      (async function init() {
+        $(".btn-logged-in").hide();
+        $("#sign-tx").hide();
 
-        (async function init() {
-            $(".btn-logged-in").hide();
-            $("#sign-tx").hide();
+        const clientId = "REPLACE_THIS"; // get your clientId from https://dashboard.web3auth.io
 
-            const clientId = "BLSm5FjP6zvKyuupXvQVL1DgZEvHqm-eom_iL9EleSY1kz1qI6SDt-sC-sIk1lDeabm3HuI4YHmpVcztgkwFmuM"; // get your clientId from https://dashboard.web3auth.io
+        const openloginAdapter = new window.OpenloginAdapter.OpenloginAdapter();
 
-            const web3auth = new Web3Auth({
-                clientId,
-                web3AuthNetwork: "mainnet", // mainnet, aqua, celeste, cyan or testnet
-                chainConfig: {
-                    chainNamespace: "eip155",
-                    chainId: "0x13881",
-                    rpcTarget: "https://rpc-mumbai.maticvigil.com", // This is the public RPC we have added, please pass on your own endpoint while creating an app
-                },
-                uiConfig: {
-                    theme: "dark",
-                    loginMethodsOrder: ["facebook", "google"],
-                    appLogo: "https://web3auth.io/images/w3a-L-Favicon-1.svg", // Your App Logo Here
-                }
-            });
-            const openloginAdapter = new OpenloginAdapter({
-                loginSettings: {
-                    mfaLevel: "default", // Pass on the mfa level of your choice: default, optional, mandatory, none
-                },
-                adapterSettings: {
-                    whiteLabel: {
-                        name: "Your app Name",
-                        logoLight: "https://web3auth.io/images/w3a-L-Favicon-1.svg",
-                        logoDark: "https://web3auth.io/images/w3a-D-Favicon-1.svg",
-                        defaultLanguage: "en",
-                        dark: true, // whether to enable dark mode. defaultValue: false
-                    },
-                }
-            });
-            web3auth.configureAdapter(openloginAdapter);
-            await web3auth.initModal({
-                modalConfig: {
-                    [WALLET_ADAPTERS.OPENLOGIN]: {
-                        label: "openlogin",
-                        loginMethods: {
-                            google: {
-                                name: "google login",
-                                logoDark: "url to your custom logo which will shown in dark mode",
-                            },
-                            facebook: {
-                                // it will hide the facebook option from the Web3Auth modal.
-                                showOnModal: false,
-                            },
-                        },
-                        // setting it to false will hide all social login methods from modal.
-                        showOnModal: true,
-                    },
-                },
-            });
-            if (web3auth.provider) {
-                $(".btn-logged-in").show();
-                $(".btn-logged-out").hide();
-                if (web3auth.connectedAdapterName === "openlogin") {
-                    $("#sign-tx").show();
-                }
-            } else {
-                $(".btn-logged-out").show();
-                $(".btn-logged-in").hide();
-            }
-        })();
-
-        $("#login").click(async function (event) {
-            try {
-                const web3authProvider = await web3auth.connect();
-                $(".btn-logged-in").show();
-            } catch (error) {
-                console.error(error.message);
-            }
+        web3auth = new window.Modal.Web3Auth({
+          clientId,
+          web3AuthNetwork: "testnet", // mainnet, aqua, celeste, cyan or testnet
+          chainConfig: {
+            chainNamespace: "eip155",
+            chainId: "0x1",
+            rpcTarget: "https://rpc.ankr.com/eth", // This is the public RPC we have added, please pass on your own endpoint while creating an app
+          },
         });
 
-        $("#get-user-info").click(async function (event) {
-            try {
-                const user = await web3auth.getUserInfo();
-                console.log(user);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+        web3auth.configureAdapter(openloginAdapter);
+        await web3auth.initModal();
+        if (web3auth.provider) {
+          $(".btn-logged-in").show();
+          $(".btn-logged-out").hide();
+          if (web3auth.connectedAdapterName === "openlogin") {
+            $("#sign-tx").show();
+          }
+        } else {
+          $(".btn-logged-out").show();
+          $(".btn-logged-in").hide();
+        }
+      })();
 
-        $("#logout").click(async function (event) {
-            try {
-                await web3auth.logout();
-                $(".btn-logged-in").hide();
-                $(".btn-logged-out").show();
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#login").click(async function (event) {
+        try {
+          const web3authProvider = await web3auth.connect();
+          $(".btn-logged-in").show();
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#get-accounts").click(async function (event) {
-            try {
-                const accounts = await rpc.getAccounts(web3auth.provider);
-                console.log(accounts);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#get-user-info").click(async function (event) {
+        try {
+          const user = await web3auth.getUserInfo();
+          console.log(user);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#get-balance").click(async function (event) {
-            try {
-                const balance = await rpc.getBalance(web3auth.provider);
-                console.log(balance);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#logout").click(async function (event) {
+        try {
+          await web3auth.logout();
+          $(".btn-logged-in").hide();
+          $(".btn-logged-out").show();
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#send-transaction").click(async function (event) {
-            try {
-                const receipt = await rpc.sendTransaction(web3auth.provider);
-                console.log(receipt);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#get-accounts").click(async function (event) {
+        try {
+          const accounts = await rpc.getAccounts(web3auth.provider);
+          console.log(accounts);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#sign-transaction").click(async function (event) {
-            try {
-                const receipt = await rpc.signTransaction(web3auth.provider);
-                console.log(receipt);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#get-balance").click(async function (event) {
+        try {
+          const balance = await rpc.getBalance(web3auth.provider);
+          console.log(balance);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#sign-message").click(async function (event) {
-            try {
-                const signedMsg = await rpc.signMessage(web3auth.provider);
-                console.log(signedMsg);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#send-transaction").click(async function (event) {
+        try {
+          const receipt = await rpc.sendTransaction(web3auth.provider);
+          console.log(receipt);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
 
-        $("#get-private-key").click(async function (event) {
-            try {
-                const privateKey = await rpc.getPrivateKey(web3auth.provider);
-                console.log(privateKey);
-            } catch (error) {
-                console.error(error.message);
-            }
-        });
+      $("#sign-transaction").click(async function (event) {
+        try {
+          const receipt = await rpc.signTransaction(web3auth.provider);
+          console.log(receipt);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
+
+      $("#sign-message").click(async function (event) {
+        try {
+          const signedMsg = await rpc.signMessage(web3auth.provider);
+          console.log(signedMsg);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
+
+      $("#get-private-key").click(async function (event) {
+        try {
+          const privateKey = await rpc.getPrivateKey(web3auth.provider);
+          console.log(privateKey);
+        } catch (error) {
+          console.error(error.message);
+        }
+      });
     </script>
-</body>
-
+  </body>
 </html>
