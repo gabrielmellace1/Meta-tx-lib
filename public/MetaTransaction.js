@@ -6,7 +6,9 @@ class MetaTransactionHandler {
     relayerURL = undefined,
     onSignedCallback = undefined,
     onReceiptCallback = undefined,
-    onErrorCallback = undefined
+    onErrorCallback = undefined,
+    walletProviderType = "metamask",
+    provider = undefined
   ) {
     this.networkConfig = {
       1: {
@@ -57,54 +59,49 @@ class MetaTransactionHandler {
     this.contractAddress = contractAddress;
     this.contractAbi = contractAbi;
     this.domainData = domainData;
+    this.walletProviderType = walletProviderType;
+    this.initProvider(provider);
   }
 
-  setRPC(network) {
-    switch (network) {
-      case 1:
-        this.RPC = undefined; // This way initProvider runs through else and
-        break;
+  async initProvider(provider) {
+    this.provider = await new ethers.providers.Web3Provider(provider);
+  }
 
+  getNetworkProvider(chainId) {
+    switch (chainId) {
       case 137:
-        this.RPC = "https://polygon-rpc.com";
-        break;
-
+        return "https://polygon-rpc.com";
       default:
-        this.RPC = network;
-
-        break;
-    }
-    this.initProvider();
-  }
-
-  async initProvider() {
-    if (this.RPC) {
-      this.provider = await new ethers.providers.JsonRpcProvider(this.RPC);
-    } else {
-      this.provider = await new ethers.providers.Web3Provider(window.ethereum);
+        return "https://polygon-rpc.com";
     }
   }
 
-  async initContract() {
+  async initContract(chainId) {
+    const provider = new ethers.providers.JsonRpcProvider(
+      this.getNetworkProvider(chainId)
+    );
+    const signer = provider.getSigner(this.address.toString());
+
     this.contract = await new ethers.Contract(
       this.contractAddress,
       this.contractAbi,
-      this.signer
+      signer
     );
   }
 
   async initSigner() {
-    this.accounts = await ethereum.request({ method: "eth_requestAccounts" });
+    //this.accounts = await ethereum.request({ method: "eth_requestAccounts" });
 
-    this.signer = await this.provider.getSigner(this.accounts[0]);
+    this.signer = await this.provider.getSigner();
 
     this.address = await this.signer.getAddress();
 
-    console.log(this.address);
+    console.log("address", this.address);
   }
 
   verifyReadyState() {
-    if (typeof ethereum !== "undefined") {
+    return true;
+    /*if (typeof ethereum !== "undefined") {
       if (this.provider == undefined) {
         return false;
       }
@@ -113,22 +110,23 @@ class MetaTransactionHandler {
     } else {
       alert("Please install MetaMask to interact with this webpage.");
       return false;
-    }
+    }*/
   }
 
   async executeMetaTransaction(functionName, parameters, chainId) {
     try {
-      await this.switchNetwork(this.domainData.chainId);
-      await this.setRPC(chainId);
+      //await this.switchNetwork(this.domainData.chainId);
+      //this.setRPC(chainId);
       await this.initSigner();
-      await this.initContract();
+      await this.initContract(chainId);
       // Verify that everything is ready
 
       if (this.verifyReadyState()) {
-        let nonce = await this.getNonce();
         const functionCallHex = await this.contract.populateTransaction[
           functionName
         ](...parameters);
+
+        const nonce = await this.getNonce();
 
         const message = {
           nonce: nonce.toString(),
@@ -145,10 +143,7 @@ class MetaTransactionHandler {
           message: message,
         });
 
-        const userSignature = await this.requestUserSignature(
-          dataToSign,
-          "metamask"
-        );
+        const userSignature = await this.requestUserSignature(dataToSign);
 
         const serverPayload = JSON.stringify({
           transactionData: {
@@ -198,37 +193,37 @@ class MetaTransactionHandler {
   async getNonce() {
     let nonce = "";
     try {
-      nonce = await this.contract.getNonce(this.address);
+      debugger;
+      nonce = await this.contract.getNonce(this.address.toString());
     } catch (error) {
       console.log(error);
     }
+    debugger;
     return nonce;
   }
 
-  async requestUserSignature(dataToSign, walletType) {
+  async requestUserSignature(dataToSign) {
     let status;
-    switch (walletType) {
+    switch (this.walletProviderType) {
       case "metamask":
-        status = await ethereum.request({
+        status = await this.walletProvider.request({
           method: "eth_signTypedData_v4",
-          params: [this.address, dataToSign],
+          params: [this.address.toString(), dataToSign],
           jsonrpc: "2.0",
           id: 999999999999,
         });
         break;
       case "web3auth":
-        // const etherProvider = new ethers.providers.Web3Provider(
-        //     this.walletProvider
-        // );
-        // const signer = etherProvider.getSigner();
-        // status = await signer.provider.send("eth_signTypedData_v4", [
-        //     userWallet,
-        //     dataToSign,
-        // ]);
+        debugger;
+        status = await this.signer.provider.send("eth_signTypedData_v4", [
+          this.address.toString(),
+          dataToSign,
+        ]);
         break;
       default:
         break;
     }
+
     return status;
   }
 
